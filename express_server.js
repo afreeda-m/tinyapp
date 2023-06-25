@@ -12,13 +12,14 @@ const generateRandomString = function (stringLength) {
   for (let i = 0; i < stringLength; i++) {
     result += chars.charAt(Math.floor(Math.random() * charsLength));
   }
-  return result;
+  return String(result);
 }
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
+
 
 app.use(express.urlencoded({ extended: true }));
 
@@ -34,6 +35,20 @@ app.post("/urls", (req, res) => {
   urlDatabase[id] = longURL['longURL'];
 
   res.redirect(`/urls/${id}`);
+});
+
+app.post('/urls/:id/update', (req, res) => {
+  const templateVar = {
+    id: req.params.id,
+    longURL: urlDatabase[req.params.id]
+  }
+
+  if (req.body.new_url) {
+    templateVar["longURL"] = req.body.new_url;
+    urlDatabase[templateVar.id] = req.body.new_url;
+  } 
+
+  res.render("urls_show", templateVar);
 });
 
 app.post('/urls/:id/delete', (req, res) => {
