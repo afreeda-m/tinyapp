@@ -51,7 +51,14 @@ app.post("/login", (req, res) => {
 app.post("/logout", (req, res) => {
   res.clearCookie("username");
   res.redirect("/urls");
-})
+});
+
+app.get("/register", (req, res) => {
+  const templateVar = {
+    username: ""
+  }
+  res.render("urls_register", templateVar);
+});
 
 app.post('/urls/:id/update', (req, res) => {
   const templateVar = {
