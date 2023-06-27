@@ -1,8 +1,10 @@
 const express = require('express'); // Import the express library
 const app = express(); // Make app as an instance of express
+const cookieParser = require('cookie-parser');
 const PORT = 8080; //default port 8080
 
 app.set("view engine", "ejs");
+app.use(cookieParser());
 
 const generateRandomString = function (stringLength) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz';
@@ -24,7 +26,10 @@ const urlDatabase = {
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase};
+  const templateVars = { 
+    username: req.cookies.username,
+    urls: urlDatabase
+  };
   res.render("urls_index", templateVars);
 });
 
@@ -45,6 +50,7 @@ app.post("/login", (req, res) => {
 
 app.post('/urls/:id/update', (req, res) => {
   const templateVar = {
+    username: req.cookies.username,
     id: req.params.id,
     longURL: urlDatabase[req.params.id]
   }
@@ -64,16 +70,19 @@ app.post('/urls/:id/delete', (req, res) => {
       delete urlDatabase[id];
     }
   }
-
   res.redirect('/urls');
 });
 
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  const templateVar = {
+    username: req.cookies.username
+  }
+  res.render("urls_new", templateVar);
 });
 
 app.get("/urls/:id", (req, res) => {
   const templateVars = { 
+    username: req.cookies.username,
     id: req.params.id, 
     longURL: urlDatabase[req.params.id]};
   res.render("urls_show", templateVars);
