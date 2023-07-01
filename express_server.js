@@ -38,33 +38,72 @@ const getUserByEmail = function(email) {
   }
 };
 
+const urlsForUser = function (id) {
+  const userURLs = {};
+
+  for (const item in urlDatabase) {
+    if (urlDatabase[item].userID === id) {
+      userURLs[item] = urlDatabase[item];
+    }
+  }
+  return userURLs;
+}
+
 // an object to store user data for making cookies
 const users = {};
 
 // database for all URLs shortened and long
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  "b2xVn2": {
+    longURL: "http://www.lighthouselabs.ca",
+    userID: "default"
+  },
+  "9sm5xK": {
+    longURL: "http://www.google.com", 
+    userID: "default"
+  }
 };
 
 app.get("/urls", (req, res) => {
+  if(!getUserFromCookie(req)) {
+    res.status(402).send("Please log in.");
+    return;
+  }
+
+  const currentUser = getUserFromCookie(req);
+
   const templateVars = {
-    user: getUserFromCookie(req),
-    urls: urlDatabase
+    user: currentUser,
+    urls: urlsForUser(currentUser.id)
   };
+  
   res.render("urls_index", templateVars);
 });
 
 app.post("/urls", (req, res) => {
+  if (!getUserFromCookie(req)) {
+    res.status(403).send("Please log in to shorten URLs");
+    return;
+  }
   const id = generateRandomString(6);
   const longURL = req.body;
+ 
+  const currentUserID = getUserFromCookie(req).id;
 
-  urlDatabase[id] = longURL['longURL'];
+  urlDatabase[id] = {
+    longURL: longURL['longURL'],
+    userID: currentUserID
+  }
 
   res.redirect(`/urls/${id}`);
 });
 
 app.get("/login", (req, res) => {
+  if (getUserFromCookie(req)) {
+    res.redirect("/urls");
+    return;
+  }
+
   const templateVar = {
     user: null
   };
@@ -97,10 +136,14 @@ app.post("/logout", (req, res) => {
 });
 
 app.get("/register", (req, res) => {
+  if (getUserFromCookie(req)) {
+    res.redirect("urls");
+  }
   const templateVar = {
     user: null
   };
   res.render("urls_register", templateVar);
+
 });
 
 app.post("/register", (req, res) => {
@@ -140,21 +183,57 @@ app.post("/register", (req, res) => {
 });
 
 app.post('/urls/:id/update', (req, res) => {
+  if (!getUserFromCookie(req)) {
+    res.status(403).send("Please log in to view URLs!");
+    return;
+  }
+
+  const currentUserID = getUserFromCookie(req).id;
+
+  const id = req.params.id;
+
+  if (urlDatabase[id].userID !== currentUserID) {
+    res.status(404).send("Cannot find URL for this user.");
+    return;
+  }
+
+  if (!urlDatabase[id]) {
+    res.status(404).send("URL does not exist!")
+  }
+
   const templateVar = {
     user: getUserFromCookie(req),
     id: req.params.id,
-    longURL: urlDatabase[req.params.id]
+    longURL: urlDatabase[req.params.id].longURL
   };
 
   if (req.body.new_url) {
     templateVar["longURL"] = req.body.new_url;
-    urlDatabase[templateVar.id] = req.body.new_url;
+    urlDatabase[templateVar.id].longURL = req.body.new_url;
   }
 
   res.render("urls_show", templateVar);
 });
 
 app.post('/urls/:id/delete', (req, res) => {
+  if (!getUserFromCookie(req)) {
+    res.status(403).send("Please log in to view URLs!");
+    return;
+  }
+
+  const currentUserID = getUserFromCookie(req).id;
+
+  const id = req.params.id;
+
+  if (urlDatabase[id].userID !== currentUserID) {
+    res.status(404).send("Cannot find URL for this user.");
+    return;
+  }
+
+  if (!urlDatabase[id]) {
+    res.status(404).send("URL does not exist!")
+  }
+
   const urlID = req.params.id;
   for (const id in urlDatabase) {
     if (urlID === id) {
@@ -165,23 +244,45 @@ app.post('/urls/:id/delete', (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
+  if (!getUserFromCookie(req)) {
+    res.redirect("/login");
+    return;
+  }
   const templateVar = {
-    user: getUserFromCookie(req)
+  user: getUserFromCookie(req)
   };
   res.render("urls_new", templateVar);
 });
 
 app.get("/urls/:id", (req, res) => {
+  if (!getUserFromCookie(req)) {
+    res.status(403).send("Please log in to view URLs!");
+    return;
+  }
+
+  const currentUserID = getUserFromCookie(req).id;
+
+  const id = req.params.id;
+
+  if (urlDatabase[id].userID !== currentUserID) {
+    res.status(404).send("Cannot find URL!");
+    return;
+  }
+
   const templateVars = {
     user: getUserFromCookie(req),
     id: req.params.id,
-    longURL: urlDatabase[req.params.id]
+    longURL: urlDatabase[req.params.id].longURL
   };
   res.render("urls_show", templateVars);
 });
 
 app.get("/u/:id", (req, res) => {
-  const longURL = urlDatabase[req.params.id];
+  const longURL = urlDatabase[req.params.id].longURL;
+  if (!longURL) {
+    res.status(403).send("Shortened URL does not exist");
+    return;
+  }
   res.redirect(longURL);
 });
 
