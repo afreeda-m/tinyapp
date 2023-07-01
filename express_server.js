@@ -1,6 +1,7 @@
 const express = require('express'); // Import the express library
 const app = express(); // Make app as an instance of express
 const cookieParser = require('cookie-parser'); // middleware to read client request cookies
+const bcrypt = require('bcryptjs');
 const PORT = 8080; //default port 8080
 
 app.set("view engine", "ejs"); // set all .ejs as the templates
@@ -120,8 +121,8 @@ app.post("/login", (req, res) => {
     return;
   }
 
-  if (currentUser.password !== password) {
-    res.status(403).send("Invalid password");
+  if (!bcrypt.compareSync(password, currentUser.password)) {
+    res.status(403).send("Invalid password.");
     return;
   }
 
@@ -170,7 +171,7 @@ app.post("/register", (req, res) => {
   const newUser = {
     id: userID,
     email: email,
-    password: password
+    password: bcrypt.hashSync(password, 10)
   };
 
   // Add new user to users database
