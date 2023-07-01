@@ -1,11 +1,15 @@
 const express = require('express'); // Import the express library
 const app = express(); // Make app as an instance of express
-const cookieParser = require('cookie-parser'); // middleware to read client request cookies
+const cookieSession = require('cookie-session'); // middleware to read client request cookies
 const bcrypt = require('bcryptjs');
 const PORT = 8080; //default port 8080
 
 app.set("view engine", "ejs"); // set all .ejs as the templates
-app.use(cookieParser());
+app.use(cookieSession({
+  name: "session",
+  keys: ['lighthouselabsPasswordKey'],
+  maxAge: 24 * 60 * 60 * 1000
+}));
 
 app.use(express.urlencoded({ extended: true }));
 
@@ -24,7 +28,7 @@ const generateRandomString = function(stringLength) {
 // read request cookie to get userID and find the correct user object
 // to be used every time to remember user as they move to another page of the website
 const getUserFromCookie = function(req) {
-  const userID = req.cookies.userID;
+  const userID = req.session.user_id;
   const currentUser = users[userID];
   return currentUser;
 };
@@ -126,13 +130,14 @@ app.post("/login", (req, res) => {
     return;
   }
 
-  res.cookie("userID", currentUser.id);
+  req.session.user_id = currentUser.id;
+
   res.redirect("/urls");
 });
 
 app.post("/logout", (req, res) => {
 
-  res.clearCookie("userID");
+  req.session = null;
   res.redirect("/login");
 });
 
@@ -178,7 +183,7 @@ app.post("/register", (req, res) => {
   users[userID] = newUser;
 
   // set the userID cookie
-  res.cookie('userID', userID);
+  req.session.user_id = userID;
 
   res.redirect("/urls");
 });
