@@ -1,6 +1,7 @@
 const express = require('express'); // Import the express library
 const app = express(); // Make app as an instance of express
 const cookieSession = require('cookie-session'); // middleware to read client request cookies
+const { getUserByEmail } = require('./helper');
 const bcrypt = require('bcryptjs');
 const PORT = 8080; //default port 8080
 
@@ -32,16 +33,6 @@ const getUserFromCookie = function(req) {
   const userID = req.session.user_id;
   const currentUser = userDatabase[userID];
   return currentUser;
-};
-
-// loop through users database and check if user email already exists
-// to be used when registering or when user tries to login
-const getUserByEmail = function(email, userDatabase) {
-  for (const user in userDatabase) {
-    if (userDatabase[user].email === email) {
-      return userDatabase[user];
-    }
-  }
 };
 
 const urlsForUser = function (id) {
