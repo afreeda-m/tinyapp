@@ -11,6 +11,7 @@ app.use(cookieSession({
   maxAge: 24 * 60 * 60 * 1000
 }));
 
+// middleware
 app.use(express.urlencoded({ extended: true }));
 
 // use this function to make random string for shortURL and userID
@@ -29,16 +30,16 @@ const generateRandomString = function(stringLength) {
 // to be used every time to remember user as they move to another page of the website
 const getUserFromCookie = function(req) {
   const userID = req.session.user_id;
-  const currentUser = users[userID];
+  const currentUser = userDatabase[userID];
   return currentUser;
 };
 
 // loop through users database and check if user email already exists
 // to be used when registering or when user tries to login
-const getUserByEmail = function(email) {
-  for (const user in users) {
-    if (users[user].email === email) {
-      return users[user];
+const getUserByEmail = function(email, userDatabase) {
+  for (const user in userDatabase) {
+    if (userDatabase[user].email === email) {
+      return userDatabase[user];
     }
   }
 };
@@ -55,7 +56,7 @@ const urlsForUser = function (id) {
 }
 
 // an object to store user data for making cookies
-const users = {};
+const userDatabase = {};
 
 // database for all URLs shortened and long
 const urlDatabase = {
@@ -118,7 +119,7 @@ app.get("/login", (req, res) => {
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
 
-  const currentUser = getUserByEmail(email);
+  const currentUser = getUserByEmail(email, userDatabase);
 
   if (!currentUser) {
     res.status(403).send("E-mail not found");
@@ -161,7 +162,7 @@ app.post("/register", (req, res) => {
     return;
   }
 
-  const foundUser = getUserByEmail(email);
+  const foundUser = getUserByEmail(email, userDatabase);
 
   if (foundUser) {
     res.status(400).send("Email already exists");
@@ -180,7 +181,7 @@ app.post("/register", (req, res) => {
   };
 
   // Add new user to users database
-  users[userID] = newUser;
+  userDatabase[userID] = newUser;
 
   // set the userID cookie
   req.session.user_id = userID;
