@@ -1,11 +1,12 @@
 const express = require('express'); // Import the express library
-const app = express(); // Make app as an instance of express
+const app = express(); // Make app as an instance of express object
 const cookieSession = require('cookie-session'); // middleware to read client request cookies
 const { getUserByEmail } = require('./helper');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcryptjs'); // import hash and encryption package
 const PORT = 8080; //default port 8080
 
 app.set("view engine", "ejs"); // set all .ejs as the templates
+
 app.use(cookieSession({
   name: "session",
   keys: ['lighthouselabsPasswordKey'],
@@ -35,7 +36,7 @@ const getUserFromCookie = function(req) {
   return currentUser;
 };
 
-const urlsForUser = function (id) {
+const urlsForUser = function(id) {
   const userURLs = {};
 
   for (const item in urlDatabase) {
@@ -44,7 +45,7 @@ const urlsForUser = function (id) {
     }
   }
   return userURLs;
-}
+};
 
 // an object to store user data for making cookies
 const userDatabase = {};
@@ -56,13 +57,14 @@ const urlDatabase = {
     userID: "default"
   },
   "9sm5xK": {
-    longURL: "http://www.google.com", 
+    longURL: "http://www.google.com",
     userID: "default"
   }
 };
 
+// set index page for urls
 app.get("/urls", (req, res) => {
-  if(!getUserFromCookie(req)) {
+  if (!getUserFromCookie(req)) {
     res.status(402).send("Please log in.");
     return;
   }
@@ -77,12 +79,15 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 
+// POST new urls into user URL database
 app.post("/urls", (req, res) => {
   if (!getUserFromCookie(req)) {
     res.status(403).send("Please log in to shorten URLs");
     return;
   }
+
   const id = generateRandomString(6);
+
   const longURL = req.body;
  
   const currentUserID = getUserFromCookie(req).id;
@@ -90,11 +95,12 @@ app.post("/urls", (req, res) => {
   urlDatabase[id] = {
     longURL: longURL['longURL'],
     userID: currentUserID
-  }
+  };
 
   res.redirect(`/urls/${id}`);
 });
 
+// login page
 app.get("/login", (req, res) => {
   if (getUserFromCookie(req)) {
     res.redirect("/urls");
@@ -107,6 +113,7 @@ app.get("/login", (req, res) => {
   res.render("urls_login", templateVar);
 });
 
+// POST login information to sign in user
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
 
@@ -127,23 +134,27 @@ app.post("/login", (req, res) => {
   res.redirect("/urls");
 });
 
+// clear cookies and logout user
 app.post("/logout", (req, res) => {
 
   req.session = null;
   res.redirect("/login");
 });
 
+// show registration page
 app.get("/register", (req, res) => {
   if (getUserFromCookie(req)) {
     res.redirect("urls");
   }
+
   const templateVar = {
     user: null
   };
-  res.render("urls_register", templateVar);
 
+  res.render("urls_register", templateVar);
 });
 
+// POST registration information in user database object
 app.post("/register", (req, res) => {
   const { email, password } = req.body;
 
@@ -190,13 +201,14 @@ app.post('/urls/:id/update', (req, res) => {
 
   const id = req.params.id;
 
+  // check if current user has the url in their database
   if (urlDatabase[id].userID !== currentUserID) {
     res.status(404).send("Cannot find URL for this user.");
     return;
   }
 
   if (!urlDatabase[id]) {
-    res.status(404).send("URL does not exist!")
+    res.status(404).send("URL does not exist!");
   }
 
   const templateVar = {
@@ -213,6 +225,7 @@ app.post('/urls/:id/update', (req, res) => {
   res.render("urls_show", templateVar);
 });
 
+// POST request to delete a url from database
 app.post('/urls/:id/delete', (req, res) => {
   if (!getUserFromCookie(req)) {
     res.status(403).send("Please log in to view URLs!");
@@ -229,26 +242,31 @@ app.post('/urls/:id/delete', (req, res) => {
   }
 
   if (!urlDatabase[id]) {
-    res.status(404).send("URL does not exist!")
+    res.status(404).send("URL does not exist!");
   }
 
   const urlID = req.params.id;
+
   for (const id in urlDatabase) {
     if (urlID === id) {
       delete urlDatabase[id];
     }
   }
+  
   res.redirect('/urls');
 });
+
 
 app.get("/urls/new", (req, res) => {
   if (!getUserFromCookie(req)) {
     res.redirect("/login");
     return;
   }
+
   const templateVar = {
-  user: getUserFromCookie(req)
+    user: getUserFromCookie(req)
   };
+
   res.render("urls_new", templateVar);
 });
 
@@ -272,15 +290,24 @@ app.get("/urls/:id", (req, res) => {
     id: req.params.id,
     longURL: urlDatabase[req.params.id].longURL
   };
+
   res.render("urls_show", templateVars);
 });
 
 app.get("/u/:id", (req, res) => {
-  const longURL = urlDatabase[req.params.id].longURL;
-  if (!longURL) {
+  const url = urlDatabase[req.params.id];
+
+  if (!url) {
     res.status(403).send("Shortened URL does not exist");
     return;
   }
+  let longURL = url.longURL;
+
+  // check that url starts with http
+  if (!longURL.startsWith("http")) {
+    longURL = "http://" + longURL;
+  }
+
   res.redirect(longURL);
 });
 
